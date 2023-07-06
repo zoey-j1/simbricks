@@ -22,10 +22,11 @@
 
 include mk/subdir_pre.mk
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic))
+lib_smartnicif := $(d)libsmartnicif.a
 
+OBJS := $(addprefix $(d),smartnicif.o)
+
+$(lib_smartnicif): $(OBJS)
+
+CLEAN := $(lib_smartnicif) $(OBJS)
 include mk/subdir_post.mk

@@ -74,6 +74,9 @@ class ExpEnv(object):
     def dev_mem_path(self, sim):
         return f'{self.workdir}/dev.mem.{sim.name}'
 
+    def smart_pci_path(self, sim_n, sim_h):
+        return f'{self.workdir}/dev.pci.{sim_n.name}.{sim_h.name}'
+
     def nic_eth_path(self, sim):
         return f'{self.workdir}/nic.eth.{sim.name}'
 

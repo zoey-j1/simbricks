@@ -94,6 +94,9 @@ class PCIDevSim(Simulator):
     def full_name(self):
         return 'dev.' + self.name
 
+    def is_smart(self):
+        return False
+
     def is_nic(self):
         return False
 
@@ -376,7 +379,10 @@ class QemuHost(HostSim):
             cmd += f' -icount shift={shift},sleep=off '
 
         for dev in self.pcidevs:
-            cmd += f'-device simbricks-pci,socket={env.dev_pci_path(dev)}'
+            if dev.is_smart():
+                cmd += f'-device simbricks-pci,socket={env.smart_pci_path(dev, self)}'
+            else:
+                cmd += f'-device simbricks-pci,socket={env.dev_pci_path(dev)}'
             if self.sync:
                 cmd += ',sync=on'
                 cmd += f',pci-latency={self.pci_latency}'
@@ -908,6 +914,61 @@ class FEMUDev(PCIDevSim):
             f' {env.dev_pci_path(self)} {env.dev_shm_path(self)}'
         )
         return cmd
+
+
+class PCIInterface(PCIDevSim):
+    """Base class for pci interface simulators."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.cpus: list[HostSim] = []
+        self.eth_latency = 500
+    
+    def is_smart(self):
+        return True
+    
+    def add_host(self, host: HostSim):
+        """Add a host to this smart device."""
+        self.cpus.append(host)
+
+    def basic_args(self, env, extra=None):
+        cmd = (
+            f'{env.smart_pci_path(self, self.cpus[0])} {env.smart_pci_path(self, self.cpus[1])}'
+            f' {env.dev_shm_path(self)} {self.sync_mode} {self.start_tick}'
+            f' {self.sync_period} {self.pci_latency} {self.eth_latency}'
+        )
+        return cmd
+    
+    def basic_run_cmd(self, env, name, extra=None):
+        cmd = f'{env.repodir}/sims/nic/{name} {self.basic_args(env, extra)}'
+        return cmd
+    
+    def full_name(self):
+        return 'smart.' + self.name
+    
+    def connect_sockets(self, env: ExpEnv) -> tp.List[tp.Tuple[Simulator, str]]:
+        sockets = []
+        for h in self.cpus:
+            sockets.append((h, env.smart_pci_path(self, h)))
+            print(f"pci interface add new host: {h}, sorcket={env.smart_pci_path(self, h)}")
+        return sockets
+    
+    def sockets_cleanup(self, env):
+       return [env.smart_pci_path(self, self.cpus[0]), 
+               env.smart_pci_path(self, self.cpus[1]), 
+               env.dev_shm_path(self)]
+
+    def sockets_wait(self, env):
+        return [env.smart_pci_path(self, self.cpus[0]), env.smart_pci_path(self, self.cpus[1])]
+
+
+class SMARTDev(PCIInterface):
+
+    def run_cmd(self, env):
+        return self.basic_run_cmd(
+            env, '/smartnic/smartnic'
+        )
 
 
 class BasicMemDev(MemDevSim):
