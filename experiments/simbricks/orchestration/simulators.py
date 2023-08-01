@@ -971,6 +971,17 @@ class SMARTDev(PCIInterface):
         )
 
 
+class SmartAdapter(PCIDevSim):
+    sync = True
+
+    def run_cmd(self, env):
+        cmd = '../sims/nic/smartnic_adapter/smartnic_adapter %s %s %s' % \
+            (
+             env.dev_pci_path(self), env.dev_shm_path(self),
+             'y' if self.sync else 'n')
+        return cmd
+
+
 class BasicMemDev(MemDevSim):
 
     def run_cmd(self, env):

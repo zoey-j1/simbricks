@@ -22,12 +22,14 @@
 
 include mk/subdir_pre.mk
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic))
-$(eval $(call subdir,smartnic_adapter))
-$(eval $(call subdir,vfio))
+bin_vfio := $(d)vfio
 
+objs_vfio := $(d)vfio.o
+
+$(OBJS): CPPFLAGS := $(CPPFLAGS) -I$(d)include/
+
+$(bin_vfio): $(objs_vfio) -lpcap
+
+CLEAN := $(bin_vfio) $(OBJS)
+ALL := $(bin_vfio)
 include mk/subdir_post.mk

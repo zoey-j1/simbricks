@@ -33,6 +33,7 @@ $(eval $(call subdir,pcie))
 $(eval $(call subdir,nicif))
 $(eval $(call subdir,nicbm))
 $(eval $(call subdir,smartnicif))
+$(eval $(call subdir,pcieadapter))
 
 $(lib_simbricks): $(libsimbricks_objs)
 	$(AR) rcs $@ $(libsimbricks_objs)

@@ -813,3 +813,29 @@ class MemcachedClient(AppConfig):
             f' --thread={self.threads} --concurrency={self.concurrency}'
             f' --tps={self.throughput} --verbose'
         )]
+
+class AdapterNode(NodeConfig):
+
+    def prepare_pre_cp(self):
+        l = []
+        l.append('mount -t proc proc /proc')
+        l.append('mount -t sysfs sysfs /sys')
+        l.append('echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode')
+        return super().prepare_pre_cp() + l
+
+    def prepare_post_cp(self):
+        l = []
+        l.append('echo 9876 1234 >/sys/bus/pci/drivers/vfio-pci/new_id')
+        return super().prepare_post_cp() + l
+
+
+class AdapterApp(AppConfig):
+    def config_files(self):
+        # copy cps impl binary into host image during prep
+        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
+        return {**m, **super().config_files()}
+
+    def run_cmds(self, node):
+        # application command to run once the host is booted up
+        return ['/tmp/guest/controller_impl']
+

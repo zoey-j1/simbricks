@@ -22,12 +22,14 @@
 
 include mk/subdir_pre.mk
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic))
-$(eval $(call subdir,smartnic_adapter))
-$(eval $(call subdir,vfio))
+bin_smartnic_adapter := $(d)smartnic_adapter
 
+objs_smartnic_adapter := $(d)smartnic_adapter.o
+
+$(OBJS): CPPFLAGS := $(CPPFLAGS) -I$(d)include/
+
+$(bin_smartnic_adapter): $(objs_smartnic_adapter) $(lib_pcieadapter) $(lib_pcie) $(lib_base) -lpcap
+
+CLEAN := $(bin_smartnic_adapter) $(OBJS)
+ALL := $(bin_smartnic_adapter)
 include mk/subdir_post.mk

@@ -20,14 +20,39 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-include mk/subdir_pre.mk
+# SOC qemu (H)  -(pcie)-> (D)          Interface          (D) <-(pcie)-  (H) Host qemu
+# SOC qemu (H)  -(pcie)-> (D) CV (net) -(wire)- (net) CV  (D) <-(pcie)-  (H) Host qemu
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic))
-$(eval $(call subdir,smartnic_adapter))
-$(eval $(call subdir,vfio))
+import os
+import simbricks.orchestration.experiments as exp
+import simbricks.orchestration.nodeconfig as node
+import simbricks.orchestration.simulators as sim
 
-include mk/subdir_post.mk
+
+# Set this to true to enable synchronization with qemu + instruction counting
+# synchronized = True
+synchronized = False
+
+experiments = []
+
+for h in ['qk']:
+    e = exp.Experiment('cps-' + h)
+    e.checkpoint = False
+
+    # host
+    server_config = node.AdapterNode()
+    server_config.app = node.AdapterApp()
+    server = sim.QemuHost(server_config)
+    server.name = 'host'
+    server.sync = synchronized
+    server.wait = True
+
+    adapter = sim.SmartAdapter()
+    adapter.name = 'adapter'
+    adapter.sync = synchronized
+    server.add_pcidev(adapter)
+
+    e.add_pcidev(adapter)
+    e.add_host(server)
+
+    experiments.append(e)

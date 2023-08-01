@@ -22,12 +22,14 @@
 
 include mk/subdir_pre.mk
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic))
-$(eval $(call subdir,smartnic_adapter))
-$(eval $(call subdir,vfio))
+lib_pcieadapter := $(d)libpcieadapter.a
 
+OBJS := $(addprefix $(d),pcieadapter.o)
+
+libsimbricks_objs += $(OBJS)
+
+$(lib_pcieadapter): $(OBJS)
+
+CLEAN := $(lib_pcieadapter) $(OBJS)
+ALL := $(lib_pcieadapter)
 include mk/subdir_post.mk
