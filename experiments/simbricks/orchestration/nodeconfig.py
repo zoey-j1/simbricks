@@ -814,7 +814,8 @@ class MemcachedClient(AppConfig):
             f' --tps={self.throughput} --verbose'
         )]
 
-class AdapterNode(NodeConfig):
+
+class AdapterHostNode(NodeConfig):
 
     def prepare_pre_cp(self):
         l = []
@@ -825,11 +826,12 @@ class AdapterNode(NodeConfig):
 
     def prepare_post_cp(self):
         l = []
+        l.append('lspci -vvv')
         l.append('echo 9876 1234 >/sys/bus/pci/drivers/vfio-pci/new_id')
         return super().prepare_post_cp() + l
 
 
-class AdapterApp(AppConfig):
+class AdapterHostApp(AppConfig):
     def config_files(self):
         # copy cps impl binary into host image during prep
         m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
@@ -837,5 +839,31 @@ class AdapterApp(AppConfig):
 
     def run_cmds(self, node):
         # application command to run once the host is booted up
-        return ['/tmp/guest/controller_impl']
+        return ['/tmp/guest/controller_impl /dev/vfio/noiommu-0 0000:00:02.0']
 
+
+class AdapterSocNode(NodeConfig):
+
+    def prepare_pre_cp(self):
+        l = []
+        l.append('mount -t proc proc /proc')
+        l.append('mount -t sysfs sysfs /sys')
+        l.append('echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode')
+        return super().prepare_pre_cp() + l
+
+    def prepare_post_cp(self):
+        l = []
+        l.append('lspci -vvv')
+        l.append('echo 9876 4321 >/sys/bus/pci/drivers/vfio-pci/new_id')
+        return super().prepare_post_cp() + l
+
+
+class AdapterSocApp(AppConfig):
+    def config_files(self):
+        # copy cps impl binary into host image during prep
+        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
+        return {**m, **super().config_files()}
+
+    def run_cmds(self, node):
+        # application command to run once the host is booted up
+        return ['/tmp/guest/controller_impl /dev/vfio/noiommu-0 0000:00:02.0']

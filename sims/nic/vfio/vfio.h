@@ -29,6 +29,18 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define QUEUE_SIZE 4096 // Adjust the queue size as needed
+
+#define TX_QUEUE_DESC_RING_ADDR_REG 0x1000  // starting address of the descriptor ring for the TX queue
+#define TX_QUEUE_DESC_RING_SIZE_REG 0x1004  // size of the descriptor ring for the TX queue
+#define TX_QUEUE_CONTROL_REG 0x1010         // register is used to control the behavior of the TX queue
+#define TX_QUEUE_ENABLE_BIT 0x1             // when set to 1, enables the TX queue for packet transmission
+
+#define RX_QUEUE_DESC_RING_ADDR_REG 0x2000  // starting address of the descriptor ring for the RX queue
+#define RX_QUEUE_DESC_RING_SIZE_REG 0x2004  // size of the descriptor ring for the RX queue
+#define RX_QUEUE_CONTROL_REG 0x2010         // control the behavior of the RX queue
+#define RX_QUEUE_ENABLE_BIT 0x1             // when set to 1, enables the RX queue for receiving packets
+
 struct vfio_dev {
     int containerfd;
     int groupfd;
@@ -37,6 +49,7 @@ struct vfio_dev {
     struct vfio_device_info info;
 };
 
+int check_mmap();
 
 int vfio_dev_open(struct vfio_dev *dev, const char *groupname,
                   const char *pci_dev);
