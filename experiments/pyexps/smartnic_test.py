@@ -20,48 +20,45 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# SOC qemu (H)  -(pcie)-> (D) Interface (D) <-(pcie)-  (H) Host qemu
-
+import os
 import simbricks.orchestration.experiments as exp
 import simbricks.orchestration.nodeconfig as node
 import simbricks.orchestration.simulators as sim
 
 
+synchronized = False
 experiments = []
 
-# for h in ['qk', 'gk']:
 for h in ['qk']:
-    e = exp.Experiment('femutest-' + h)
+    e = exp.Experiment('adapter-' + h)
     e.checkpoint = False
 
-    node_config = node.LinuxFEMUNode()
-    node_config.app = node.NVMEFsTest()
-    node_config.cores = 1
-    node_config.app.is_sleep = 1
-
-    if h == 'gk':
-        host = sim.Gem5Host(node_config)
-        host.cpu_type = 'X86KvmCPU'
-    elif h == 'qk':
-        soc = sim.QemuHost(node_config)
-        host = sim.QemuHost(node_config)
-
-    soc.name = 'soc.0'
-    e.add_host(soc)
-    soc.wait = True
-
-    host.name = 'host.0'
-    e.add_host(host)
+    host_config = node.AdapterHostNode()
+    host_config.app = node.AdapterHostApp()
+    host = sim.QemuHost(host_config)
+    host.name = 'host'
+    host.sync = synchronized
     host.wait = True
 
-    smart = sim.SMARTDev()
-    smart.name = "smart0"
-    e.add_pcidev(smart)
+    soc_config = node.AdapterSocNode()
+    soc_config.app = node.AdapterSocApp()
+    soc = sim.QemuHost(soc_config)
+    soc.name = 'soc'
+    soc.sync = synchronized
+    soc.wait = True
 
-    soc.add_pcidev(smart)
-    host.add_pcidev(smart)
+    adapter = sim.SMARTDev()
+    adapter.name = 'adapter'
+    adapter.sync = synchronized
 
-    smart.add_host(soc)
-    smart.add_host(host)
+    host.add_pcidev(adapter)
+    soc.add_pcidev(adapter)
+
+    adapter.add_host(host)
+    adapter.add_host(soc)
+
+    e.add_pcidev(adapter)
+    e.add_host(host)
+    e.add_host(soc)
 
     experiments.append(e)
