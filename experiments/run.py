@@ -320,6 +320,7 @@ if not args.pickled:
         class ExperimentModuleLoadError(Exception):
             pass
 
+        print(f"modname {modname}, path {path}")
         spec = importlib.util.spec_from_file_location(modname, path)
         if spec is None:
             raise ExperimentModuleLoadError('spec is None')

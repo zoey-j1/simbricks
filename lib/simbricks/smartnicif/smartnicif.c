@@ -31,7 +31,8 @@
 int SimbricksSmartNicIfInit(struct SimbricksSmartNicIf *nicif, const char *shm_path,
                        struct SimbricksBaseIfParams *pcieParams0,
                        struct SimbricksBaseIfParams *pcieParams1,
-                       struct SimbricksProtoPcieDevIntro *di) {
+                       struct SimbricksProtoPcieDevIntro *di0,
+                       struct SimbricksProtoPcieDevIntro *di1) {
   struct SimbricksBaseIf *pcieif0 = &nicif->pcie0.base;
   struct SimbricksBaseIf *pcieif1 = &nicif->pcie1.base;
 
@@ -67,8 +68,8 @@ int SimbricksSmartNicIfInit(struct SimbricksSmartNicIf *nicif, const char *shm_p
 
     memset(&pcie_h_intro0, 0, sizeof(pcie_h_intro0));
     ests[n_bifs].base_if = pcieif0;
-    ests[n_bifs].tx_intro = di;
-    ests[n_bifs].tx_intro_len = sizeof(*di);
+    ests[n_bifs].tx_intro = di0;
+    ests[n_bifs].tx_intro_len = sizeof(*di0);
     ests[n_bifs].rx_intro = &pcie_h_intro0;
     ests[n_bifs].rx_intro_len = sizeof(pcie_h_intro0);
     n_bifs++;
@@ -87,8 +88,8 @@ int SimbricksSmartNicIfInit(struct SimbricksSmartNicIf *nicif, const char *shm_p
 
     memset(&pcie_h_intro1, 0, sizeof(pcie_h_intro1));
     ests[n_bifs].base_if = pcieif1;
-    ests[n_bifs].tx_intro = di;
-    ests[n_bifs].tx_intro_len = sizeof(*di);
+    ests[n_bifs].tx_intro = di1;
+    ests[n_bifs].tx_intro_len = sizeof(*di1);
     ests[n_bifs].rx_intro = &pcie_h_intro1;
     ests[n_bifs].rx_intro_len = sizeof(pcie_h_intro1);
     n_bifs++;

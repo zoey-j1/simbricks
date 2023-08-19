@@ -40,8 +40,8 @@ for h in ['qk']:
     e.checkpoint = False
 
     # host
-    server_config = node.AdapterNode()
-    server_config.app = node.AdapterApp()
+    server_config = node.AdapterHostNode()
+    server_config.app = node.AdapterHostApp()
     server = sim.QemuHost(server_config)
     server.name = 'host'
     server.sync = synchronized

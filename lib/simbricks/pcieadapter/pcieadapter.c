@@ -16,12 +16,18 @@ static void abort_iffail(bool success, const char *msg)
 }
 
 
-void simbricks_adapter_init(struct SimbricksSmartAdapter *nicif,
+void simbricks_adapter_init(struct SimbricksSmartNicIf *nicif,
                             const char *socket_path0,
                             const char *socket_path1,
                             const char *shm_path,
                             bool enable_sync)
 {
+
+  struct SimbricksBaseIfParams pcieParams0;
+  struct SimbricksBaseIfParams pcieParams1;
+
+  SimbricksPcieIfDefaultParams(&pcieParams0);
+  SimbricksPcieIfDefaultParams(&pcieParams1);
 
   /** fill in essential PCI device info */
   struct SimbricksProtoPcieDevIntro di0;
@@ -31,7 +37,6 @@ void simbricks_adapter_init(struct SimbricksSmartAdapter *nicif,
   di0.pci_vendor_id = 0x9876;
   di0.pci_device_id = 0x1234;
 
-  /** fill in essential PCI device info */
   struct SimbricksProtoPcieDevIntro di1;
   memset(&di1, 0, sizeof(di1));
   di1.bars[0].len = 0x10000;
@@ -39,38 +44,14 @@ void simbricks_adapter_init(struct SimbricksSmartAdapter *nicif,
   di1.pci_vendor_id = 0x9876;
   di1.pci_device_id = 0x4321;
 
-  struct SimbricksBaseIfParams pcieParams0;
-  struct SimbricksBaseIfParams pcieParams1;
-  SimbricksPcieIfDefaultParams(&pcieParams0);
-  SimbricksPcieIfDefaultParams(&pcieParams1);
-
-  pcieParams0.blocking_conn = true;
   pcieParams0.sock_path = socket_path0;
-  pcieParams0.sync_mode = (enable_sync ?
-      kSimbricksBaseIfSyncRequired : kSimbricksBaseIfSyncDisabled);
-
-  pcieParams1.blocking_conn = true;
   pcieParams1.sock_path = socket_path1;
-  pcieParams1.sync_mode = (enable_sync ?
-      kSimbricksBaseIfSyncRequired : kSimbricksBaseIfSyncDisabled);
+  
+  // fprintf(stderr, "pcieParams0.sock_path is %s, pcieParams1.sock_path is %s\n", pcieParams0.sock_path, pcieParams1.sock_path); 
 
-  abort_iffail(!SimbricksBaseIfSHMPoolCreate(&nicif->pool, shm_path, SimbricksBaseIfSHMSize(&pcieParams0) + SimbricksBaseIfSHMSize(&pcieParams1)), "pool create");
-
-  struct SimbricksBaseIf *bif0 = &nicif->pcie0.base;
-  abort_iffail(!SimbricksBaseIfInit(bif0, &pcieParams0), "base init");
-  abort_iffail(!SimbricksBaseIfListen(bif0, &nicif->pool), "listen");
-  abort_iffail(!SimbricksBaseIfIntroSend(bif0, &di0, sizeof(di0)), "intro send");
-  struct SimbricksProtoPcieHostIntro hi0;
-  size_t hl0 = sizeof(hi0);
-  abort_iffail(!SimbricksBaseIfIntroRecv(bif0, &hi0, &hl0), "intro recv");
-
-  struct SimbricksBaseIf *bif1 = &nicif->pcie1.base;
-  abort_iffail(!SimbricksBaseIfInit(bif1, &pcieParams1), "base init");
-  abort_iffail(!SimbricksBaseIfListen(bif1, &nicif->pool), "listen");
-  abort_iffail(!SimbricksBaseIfIntroSend(bif1, &di1, sizeof(di1)), "intro send");
-  struct SimbricksProtoPcieHostIntro hi1;
-  size_t hl1 = sizeof(hi1);
-  abort_iffail(!SimbricksBaseIfIntroRecv(bif1, &hi1, &hl1), "intro recv");
+  if (SimbricksSmartNicIfInit(nicif, shm_path, &pcieParams0, &pcieParams1, &di0, &di1) != 0) {
+    fprintf(stderr, "SimbricksSmartNicIfInit failed\n");
+  }
 }
 
 void *simbricks_adapter_getevent(struct SimbricksPcieIf *pcie, uint64_t ts)

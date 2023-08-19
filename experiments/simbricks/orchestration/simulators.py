@@ -340,6 +340,8 @@ class QemuHost(HostSim):
         return 8192
 
     def prep_cmds(self, env):
+        print(f"prep_cmd is run hdcopy path is {env.hdcopy_path(self)}")
+        print(f"backing_file is {env.hd_path(self.node_config.disk_image)}")
         return [
             f'{env.qemu_img_path} create -f qcow2 -o '
             f'backing_file="{env.hd_path(self.node_config.disk_image)}" '

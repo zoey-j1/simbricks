@@ -28,7 +28,7 @@ objs_smartnic := $(d)smartnic.o
 
 $(OBJS): CPPFLAGS := $(CPPFLAGS) -I$(d)include/
 
-$(bin_smartnic): $(objs_smartnic) $(lib_pcieadapter) $(lib_pcie) $(lib_base) -lpcap
+$(bin_smartnic): $(objs_smartnic) $(lib_pcieadapter) $(lib_smartnicif) $(lib_pcie) $(lib_base) -lpcap
 
 CLEAN := $(bin_smartnic) $(bin_smartnic_tester) $(OBJS)
 ALL := $(bin_smartnic)

@@ -39,7 +39,8 @@ struct SimbricksSmartNicIf {
 int SimbricksSmartNicIfInit(struct SimbricksSmartNicIf *nicif, const char *shmPath,
                        struct SimbricksBaseIfParams *pcieParams0,
                        struct SimbricksBaseIfParams *pcieParams1,
-                       struct SimbricksProtoPcieDevIntro *di);
+                       struct SimbricksProtoPcieDevIntro *di0,
+                       struct SimbricksProtoPcieDevIntro *di1);
 
 int SimbricksSmartNicIfCleanup(struct SimbricksSmartNicIf *nicif);
 

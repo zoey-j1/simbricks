@@ -21,13 +21,7 @@
 #define RX_QUEUE_CONTROL_REG 0x2010         // control the behavior of the RX queue
 #define RX_QUEUE_ENABLE_BIT 0x1             // when set to 1, enables the RX queue for receiving packets
 
-struct SimbricksSmartAdapter {
-  struct SimbricksBaseIfSHMPool pool;
-  struct SimbricksPcieIf pcie0;
-  struct SimbricksPcieIf pcie1;
-};
-
-void simbricks_adapter_init(struct SimbricksSmartAdapter *nicif, const char *socket_path0, const char *socket_path1, const char *shm_path, bool enable_sync);
+void simbricks_adapter_init(struct SimbricksSmartNicIf *nicif, const char *socket_path0, const char *socket_path1, const char *shm_path, bool enable_sync);
 void *simbricks_adapter_getevent(struct SimbricksPcieIf *pcie, uint64_t ts);
 bool simbricks_adapter_getread(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len);
 bool simbricks_adapter_getwrite(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len, uint64_t *val);

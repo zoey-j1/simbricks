@@ -26,78 +26,22 @@ import simbricks.orchestration.nodeconfig as node
 import simbricks.orchestration.simulators as sim
 
 
-class AdapterHostNode(node.NodeConfig):
-
-    def prepare_pre_cp(self):
-        l = []
-        l.append('mount -t proc proc /proc')
-        l.append('mount -t sysfs sysfs /sys')
-        l.append('echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode')
-        return super().prepare_pre_cp() + l
-
-    def prepare_post_cp(self):
-        l = []
-        l.append('lspci -vvv')
-        l.append('echo 9876 1234 >/sys/bus/pci/drivers/vfio-pci/new_id')
-        return super().prepare_post_cp() + l
-
-
-class AdapterHostApp(node.AppConfig):
-    def config_files(self):
-        # copy cps impl binary into host image during prep
-        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
-        return {**m, **super().config_files()}
-
-    def run_cmds(self, node):
-        # application command to run once the host is booted up
-        return ['/tmp/guest/controller_impl /dev/vfio/noiommu-0 0000:00:02.0']
-
-
-class AdapterSocNode(node.NodeConfig):
-
-    def prepare_pre_cp(self):
-        l = []
-        l.append('mount -t proc proc /proc')
-        l.append('mount -t sysfs sysfs /sys')
-        l.append('echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode')
-        return super().prepare_pre_cp() + l
-
-    def prepare_post_cp(self):
-        l = []
-        l.append('lspci -vvv')
-        l.append('echo 9876 4321 >/sys/bus/pci/drivers/vfio-pci/new_id')
-        return super().prepare_post_cp() + l
-
-
-class AdapterSocApp(node.AppConfig):
-    def config_files(self):
-        # copy cps impl binary into host image during prep
-        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
-        return {**m, **super().config_files()}
-
-    def run_cmds(self, node):
-        # application command to run once the host is booted up
-        return ['/tmp/guest/controller_impl /dev/vfio/noiommu-0 0000:00:02.0']
-
-
-
 synchronized = False
-
 experiments = []
 
 for h in ['qk']:
     e = exp.Experiment('adapter-' + h)
     e.checkpoint = False
 
-    host_config = AdapterHostNode()
-    host_config.app = AdapterHostApp()
+    host_config = node.AdapterHostNode()
+    host_config.app = node.AdapterHostApp()
     host = sim.QemuHost(host_config)
     host.name = 'host'
     host.sync = synchronized
     host.wait = True
 
-    soc_config = AdapterSocNode()
-    soc_config.app = AdapterSocApp()
+    soc_config = node.AdapterSocNode()
+    soc_config.app = node.AdapterSocApp()
     soc = sim.QemuHost(soc_config)
     soc.name = 'soc'
     soc.sync = synchronized

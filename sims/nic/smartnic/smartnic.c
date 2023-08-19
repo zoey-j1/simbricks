@@ -38,6 +38,7 @@
 
 #include <simbricks/pcie/if.h>
 #include <simbricks/pcieadapter/pcieadapter.h>
+#include <simbricks/smartnicif/smartnicif.h>
 
 typedef struct {
     uint64_t id;
@@ -52,7 +53,7 @@ typedef struct {
     uint64_t value;
 } WriteEvent;
 
-static struct SimbricksSmartAdapter nicif;
+static struct SimbricksSmartNicIf nicif;
 
 int main(int argc, char *argv[]) {
 
@@ -61,10 +62,10 @@ int main(int argc, char *argv[]) {
         printf("argv[%d]: %s\n", i, argv[i]);
     }
 
-    if (argc < 5) {
-        printf("Usage: %s <path_sock> <path_sock> <path_shm> <sync (y/n)>\n", argv[0]);
-        return 1;
-    }
+    // if (argc < 4) {
+    //     printf("Usage: %s <path_sock> <path_sock> <path_shm> <sync (y/n)>\n", argv[0]);
+    //     return 1;
+    // }
 
     ReadEvent *read_ev = malloc(sizeof(ReadEvent));
     WriteEvent *write_ev = malloc(sizeof(WriteEvent));
