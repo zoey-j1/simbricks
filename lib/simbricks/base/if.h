@@ -32,6 +32,7 @@
 #include <stdatomic.h>
 #endif
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -327,9 +328,12 @@ static inline volatile union SimbricksProtoBaseMsg *SimbricksBaseIfOutAlloc(
 static inline void SimbricksBaseIfOutSend(
     struct SimbricksBaseIf *base_if, volatile union SimbricksProtoBaseMsg *msg,
     uint8_t msg_type) {
+
+  fprintf(stderr, "SimbricksBaseIfOutSend start\n");
   atomic_store_explicit((volatile _Atomic(uint8_t) *)&msg->header.own_type,
                         (uint8_t)(msg_type | SIMBRICKS_PROTO_MSG_OWN_CON),
                         memory_order_release);
+  fprintf(stderr, "SimbricksBaseIfOutSend finish\n");
 }
 
 /**

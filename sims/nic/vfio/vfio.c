@@ -202,14 +202,6 @@ int main(int argc, char *argv[]) {
     char data[] = "Hello, VFIO!";
     size_t data_size = strlen(data) + 1;
 
-    // Write data to the TX queue
-    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
-    if (write_result < 0) {
-        perror("Error writing to TX queue");
-    } else {
-        printf("Data written to TX queue: %s\n", data);
-    }
-
     // Read data from the RX queue
     char rx_data[QUEUE_SIZE];
     ssize_t read_result = vfio_read_rx_queue(rx_queue_buf, rx_data, data_size);
@@ -227,10 +219,20 @@ int main(int argc, char *argv[]) {
     }
     printf("\n");
 
+    // Write data to the TX queue
+    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
+    if (write_result < 0) {
+        perror("Error writing to TX queue");
+    } else {
+        printf("Data written to TX queue: %s\n", data);
+    }
+
     // Clean up
     vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
     vfio_unmap_queue_buffer(rx_queue_buf, QUEUE_SIZE);
     vfio_dev_close(&dev);
+
+    // sleep(10);
 
     return 0;
 }
