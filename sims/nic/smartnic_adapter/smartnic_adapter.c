@@ -92,11 +92,12 @@ int main(int argc, char *argv[]) {
         if (ev != NULL) {
             if (simbricks_adapter_getread(&nicif.pcie0, ev, &read_ev->id, &read_ev->addr, &read_ev->len)) {
                 fprintf(stderr, "adapter getread, forward from pcie0 to pcie1\n");
-                simbricks_adapter_forward(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
+                simbricks_adapter_forward_read(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
                 // simbricks_adapter_complr(&nicif.pcie0, read_ev->id, 42, read_ev->len, cur_time);
             } 
             else if (simbricks_adapter_getwrite(&nicif.pcie0, ev, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
-                simbricks_adapter_complw(&nicif.pcie0, write_ev->id, cur_time);
+                // simbricks_adapter_complw(&nicif.pcie0, write_ev->id, cur_time);
+                simbricks_adapter_forward_write(&nicif.pcie1, write_ev->id, cur_time);
             }
         }
 
@@ -108,13 +109,13 @@ int main(int argc, char *argv[]) {
 
         if (ev1 != NULL) {
             if (simbricks_adapter_getreadcomp(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
-                // fprintf(stderr, "adapter getread complete from pcie1, send complete to pcie0\n");
-                // simbricks_adapter_forward(&nicif.pcie0, read_ev->id, 42, read_ev->len, cur_time);
                 simbricks_adapter_complr(&nicif.pcie0, read_ev->id, 42, read_ev->len, cur_time);
             }
-            if (simbricks_adapter_getread(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
+            else if (simbricks_adapter_getwritecomp(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
+                simbricks_adapter_complw(&nicif.pcie0, write_ev->id, cur_time);
+            }
+            else if (simbricks_adapter_getread(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
                 simbricks_adapter_complr(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
-                // simbricks_adapter_forward(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
             } 
             else if (simbricks_adapter_getwrite(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
                 simbricks_adapter_complw(&nicif.pcie1, write_ev->id, cur_time);

@@ -29,7 +29,9 @@ void simbricks_adapter_eventdone(struct SimbricksPcieIf *pcie, void *ev);
 uint64_t simbricks_adapter_nextts(struct SimbricksPcieIf *pcie);
 void simbricks_adapter_complr(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts);
 void simbricks_adapter_complw(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t ts);
-void simbricks_adapter_forward(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts);
+void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts);
 bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len);
+void simbricks_adapter_forward_write(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t ts);
+bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len, uint64_t *val);
 
 #endif // SIMBRICKS_ADAPTER_H

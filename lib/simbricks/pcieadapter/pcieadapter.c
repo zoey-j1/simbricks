@@ -172,9 +172,9 @@ void simbricks_adapter_complw(struct SimbricksPcieIf *pcie, uint64_t id, uint64_
 
 }
 
-void simbricks_adapter_forward(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts)
+void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts)
 {
-  fprintf(stderr, "simbricks_adapter_forward start\n");
+  fprintf(stderr, "simbricks_adapter_forward_read start\n");
   volatile union SimbricksProtoPcieD2H *msg = alloc_out(pcie, ts);
   memcpy((void *) msg->write.data, &val, len);
   msg->writecomp.req_id = id;
@@ -209,6 +209,41 @@ bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint6
   *len = msg->read.len;
 
   fprintf(stderr, "simbricks_adapter_getreadcomp return TRUE, address is %ld\n", *addr);
+
+  return true;
+}
+
+void simbricks_adapter_forward_write(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t ts)
+{
+  volatile union SimbricksProtoPcieD2H *msg = alloc_out(pcie, ts);
+  msg->writecomp.req_id = id;
+  SimbricksPcieIfD2HOutSend(pcie, msg,
+    SIMBRICKS_PROTO_PCIE_D2H_MSG_WRITE);
+}
+
+bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr,
+                               uint8_t *len, uint64_t *val)
+{
+  fprintf(stderr, "simbricks_adapter_getwritecomp start\n");
+  volatile union SimbricksProtoPcieH2D *msg =
+    (volatile union SimbricksProtoPcieH2D *) ev;
+
+  fprintf(stderr, "!msg %d\n", !msg);
+  fprintf(stderr, "!msg || SimbricksPcieIfH2DInType(pcie, msg) %d\n", !msg || SimbricksPcieIfH2DInType(pcie, msg)!= SIMBRICKS_PROTO_PCIE_H2D_MSG_WRITECOMP);
+  if (msg){
+    fprintf(stderr, "SimbricksPcieIfH2DInType(pcie, msg) %d\n", SimbricksPcieIfH2DInType(pcie, msg));
+  }
+
+  if (!msg || SimbricksPcieIfH2DInType(pcie, msg) !=
+      SIMBRICKS_PROTO_PCIE_H2D_MSG_WRITECOMP) {
+      return false;
+  }
+
+  *id = msg->read.req_id;
+  *addr = msg->read.offset;
+  *len = msg->read.len;
+
+  fprintf(stderr, "simbricks_adapter_getwritecomp return TRUE, address is %ld\n", *addr);
 
   return true;
 }

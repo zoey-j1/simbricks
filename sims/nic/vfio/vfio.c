@@ -170,6 +170,20 @@ ssize_t vfio_write_tx_queue(void *tx_queue_buf, const void *data, size_t size) {
     // Copy data from the 'data' buffer into the TX queue buffer
     memcpy(tx_queue_buf, data, size);
 
+    uint8_t *byte_ptr = (uint8_t*)tx_queue_buf; // Cast the void* pointer to uint8_t*
+    fprintf(stderr, "print tx queue right after write\n");
+    for (size_t i = 0; i < size; i++) {
+        fprintf(stderr, "i is %ld\n", i);
+        uint8_t current_byte = byte_ptr[i];
+        
+        if (current_byte == '\0') {
+            // Reached the end of the string, break the loop
+            break;
+        } 
+        fprintf(stderr, "i %ld %c ", i, current_byte);
+    }
+    fprintf(stderr, "\n");
+
     return size;
 }
 
@@ -183,14 +197,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    fprintf(stderr, "TX_QUEUE_DESC_RING_ADDR_REG %x\n", TX_QUEUE_DESC_RING_ADDR_REG);
     // Map device regions
     void *tx_queue_buf = vfio_map_queue_buffer(dev.devfd, TX_QUEUE_DESC_RING_ADDR_REG);
     if (tx_queue_buf == NULL) {
         vfio_dev_close(&dev);
         return 1;
     }
+    fprintf(stderr, "tx_queue_buf %p\n", tx_queue_buf);
 
-    // TODO: vfio_map_queue_buffer(dev.devfd, QUEUE_SIZE) get Invalid argument error
+    fprintf(stderr, "RX_QUEUE_DESC_RING_ADDR_REG %x\n", RX_QUEUE_DESC_RING_ADDR_REG);
     void *rx_queue_buf = vfio_map_queue_buffer(dev.devfd, RX_QUEUE_DESC_RING_ADDR_REG);
     if (rx_queue_buf == NULL) {
         vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
@@ -198,18 +214,32 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    fprintf(stderr, "rx_queue_buf %p\n", rx_queue_buf);
+
     // Perform read and write operations on the queues
     char data[] = "Hello, VFIO!";
     size_t data_size = strlen(data) + 1;
 
+    // Write data to the TX queue
+    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
+    if (write_result < 0) {
+        perror("Error writing to TX queue");
+    } else {
+        printf("Data written to TX queue: %s\n", data);
+    }
+
+    fprintf(stderr, "tx_queue_buf %p\n", tx_queue_buf);
+
     // Read data from the RX queue
-    char rx_data[QUEUE_SIZE];
-    ssize_t read_result = vfio_read_rx_queue(rx_queue_buf, rx_data, data_size);
+    char rx_data[13];
+    ssize_t read_result = vfio_read_rx_queue(tx_queue_buf, rx_data, data_size);
     if (read_result < 0) {
         perror("Error reading from RX queue");
     } else {
         printf("Data read from RX queue: %s\n", rx_data);
     }
+
+    fprintf(stderr, "rx_queue_buf %p\n", rx_queue_buf);
 
     printf("read data from rx queue: ");
     int i = 0;
@@ -219,13 +249,6 @@ int main(int argc, char *argv[]) {
     }
     printf("\n");
 
-    // Write data to the TX queue
-    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
-    if (write_result < 0) {
-        perror("Error writing to TX queue");
-    } else {
-        printf("Data written to TX queue: %s\n", data);
-    }
 
     // Clean up
     vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
