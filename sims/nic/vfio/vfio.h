@@ -29,10 +29,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define QUEUE_SIZE 4096 // Adjust the queue size as needed
-#define TX_QUEUE_DESC_RING_ADDR_REG 0x0000  // starting address of the descriptor ring for the TX queue
-#define RX_QUEUE_DESC_RING_ADDR_REG 0x0000  // starting address of the descriptor ring for the RX queue
-
 struct vfio_dev {
     int containerfd;
     int groupfd;
@@ -41,7 +37,6 @@ struct vfio_dev {
     struct vfio_device_info info;
 };
 
-int check_mmap();
 
 int vfio_dev_open(struct vfio_dev *dev, const char *groupname,
                   const char *pci_dev);
@@ -69,15 +64,8 @@ int vfio_write(struct vfio_dev* dev, struct vfio_region_info *reg,
 #define READ_REG32(b, o) *((volatile uint32_t *) (((uint8_t *) b) + o))
 #define WRITE_REG32(b, o, d) (*((volatile uint32_t *)((uint8_t *) b + o)) = ((uint32_t) d))
 
-// #define READ_REG64(b, o) (volatile uint64_t *) (((uint64_t *) b) + o)
-#define READ_REG64(b, o) (*(volatile uint64_t *) (((uint64_t *) b) + o))
-uint64_t read_reg64(void *base, size_t offset) {
-    fprintf(stderr, "read_reg64 is called\n");
-    volatile uint64_t *reg = (volatile uint64_t *)((uint64_t *)base + offset);
-    fprintf(stderr, "*reg is %lx\n", *reg);
-    return *reg;
-}
-
+#define READ_REG64(b, o) (volatile uint64_t *) (((uint64_t *) b) + o)
+// #define READ_REG64(b, o) (*(volatile uint64_t *) (((uint64_t *) b) + o))
 #define WRITE_REG64(b, o, d) (*((volatile uint64_t *)((uint8_t *) b + o)) = ((uint64_t) d))
 
 #endif /* ndef VFIO_H_ */

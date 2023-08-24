@@ -178,8 +178,8 @@ void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, u
   volatile union SimbricksProtoPcieD2H *msg = alloc_out(pcie, ts);
   memcpy((void *) msg->write.data, &val, len);
   msg->writecomp.req_id = id;
-  msg->read.offset = TX_QUEUE_DESC_RING_SIZE_REG;
-  msg->read.len = sizeof(uint64_t);
+  // msg->read.offset = TX_QUEUE_DESC_RING_SIZE_REG;
+  // msg->read.len = sizeof(uint64_t);
 
   fprintf(stderr, "forward offset %ld, len %d\n", msg->read.offset, msg->read.len);
   SimbricksPcieIfD2HOutSend(pcie, msg,

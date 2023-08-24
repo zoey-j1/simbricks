@@ -21,6 +21,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #define __USE_LARGEFILE64
 #include "vfio.h"
 #include <fcntl.h>
@@ -45,217 +46,225 @@
 
 #include "vfio.h"
 
-int vfio_dev_open(struct vfio_dev *dev, const char *groupname, const char *pci_dev) {
-    dev->containerfd = open("/dev/vfio/vfio", O_RDWR);
-    if (dev->containerfd < 0) {
-        perror("Error opening VFIO container");
-        return -1;
+int vfio_dev_open(struct vfio_dev *dev, const char *groupname,
+        const char *pci_dev)
+{
+    int container, group, device, i;
+    struct vfio_group_status group_status =
+    { .argsz = sizeof(group_status) };
+
+    /* Create a new container */
+    if ((container = open("/dev/vfio/vfio", O_RDWR)) < 0) {
+        perror("open vfio failed");
+        goto out;
     }
 
-    if (ioctl(dev->containerfd, VFIO_GET_API_VERSION) != VFIO_API_VERSION) {
-        perror("Incompatible VFIO API version");
-        close(dev->containerfd);
-        return -1;
+    if (ioctl(container, VFIO_GET_API_VERSION) != VFIO_API_VERSION) {
+        perror("unexpected vfio api version");
+        goto out_container;
     }
 
-    if (ioctl(dev->containerfd, VFIO_CHECK_EXTENSION, VFIO_NOIOMMU_IOMMU) != 1) {
-        perror("vfio_dev_open not available");
-        close(dev->containerfd);
-        return -1;
+    /* Open the group */
+    group = open(groupname, O_RDWR);
+    if (group < 0) {
+        perror("open group failed");
+        goto out_container;
     }
 
-    // Open the VFIO group
-    dev->groupfd = open(groupname, O_RDWR);
-    if (dev->groupfd < 0) {
-        perror("Error opening VFIO group");
-        close(dev->containerfd);
-        return -1;
-    }
-
-    struct vfio_group_status group_status = { .argsz = sizeof(group_status) };
-    if (ioctl(dev->groupfd, VFIO_GROUP_GET_STATUS, &group_status)) {
-        perror("Error getting VFIO group status");
-        close(dev->groupfd);
-        close(dev->containerfd);
-        return -1;
+    /* Test the group is viable and available */
+    if (ioctl(group, VFIO_GROUP_GET_STATUS, &group_status) < 0) {
+        perror("ioctl get status failed");
+        goto out_group;
     }
 
     if (!(group_status.flags & VFIO_GROUP_FLAGS_VIABLE)) {
-        perror("VFIO group is not viable (device not attached)");
-        close(dev->groupfd);
-        close(dev->containerfd);
-        return -1;
+        fprintf(stderr, "vfio group not viable\n");
+        goto out_group;
     }
 
-    // Add the group to the container
-    if (ioctl(dev->groupfd, VFIO_GROUP_SET_CONTAINER, &(dev->containerfd))) {
-        perror("Error adding VFIO group to container");
-        close(dev->groupfd);
-        close(dev->containerfd);
-        return -1;
+    /* Add the group to the container */
+    if (ioctl(group, VFIO_GROUP_SET_CONTAINER, &container) < 0) {
+        fprintf(stderr, "set container failed\n");
+        goto out_group;
     }
 
-    // Enable the NOIOMMU
-    if (ioctl(dev->containerfd, VFIO_SET_IOMMU, VFIO_NOIOMMU_IOMMU)) {
-        perror("Error enabling NOIOMMU");
-        close(dev->groupfd);
-        close(dev->containerfd);
-        return -1;
+    /* Enable the IOMMU model we want */
+    if (ioctl(container, VFIO_SET_IOMMU, VFIO_NOIOMMU_IOMMU) < 0) {
+        fprintf(stderr, "set iommu model failed\n");
+        goto out_group;
     }
 
-    // Get the device file descriptor
-    dev->devfd = ioctl(dev->groupfd, VFIO_GROUP_GET_DEVICE_FD, pci_dev);
-    if (dev->devfd < 0) {
-        perror("Error getting VFIO device file descriptor");
-        close(dev->groupfd);
-        close(dev->containerfd);
-        return -1;
+    /* Get a file descriptor for the device */
+    if ((device = ioctl(group, VFIO_GROUP_GET_DEVICE_FD, pci_dev)) < 0) {
+        perror("getting device failed");
+        goto out_group;
     }
 
-    // Get device information
+    /* Test and setup the device */
+    memset(&dev->info, 0, sizeof(dev->info));
     dev->info.argsz = sizeof(dev->info);
-    if (ioctl(dev->devfd, VFIO_DEVICE_GET_INFO, &(dev->info))) {
-        perror("Error getting VFIO device info");
-        close(dev->devfd);
-        close(dev->groupfd);
-        close(dev->containerfd);
+    if ((i = ioctl(device, VFIO_DEVICE_GET_INFO, &dev->info)) < 0) {
+        perror("getting device info failed");
+        goto out_dev;
+    }
+
+    dev->containerfd = container;
+    dev->groupfd = group;
+    dev->devfd = device;
+    return 0;
+
+out_dev:
+    close(device);
+out_group:
+    close(group);
+out_container:
+    close(container);
+out:
+    return -1;
+}
+
+int vfio_dev_reset(struct vfio_dev *dev)
+{
+    if (ioctl(dev->devfd, VFIO_DEVICE_RESET) < 0) {
+        perror("vfio_dev_reset: reset failed");
+        return -1;
+    }
+    return 0;
+}
+
+int vfio_irq_info(struct vfio_dev *dev, uint32_t index,
+        struct vfio_irq_info *irq)
+{
+    memset(irq, 0, sizeof(*irq));
+
+    irq->argsz = sizeof(*irq);
+    irq->index = index;
+
+    if (ioctl(dev->devfd, VFIO_DEVICE_GET_IRQ_INFO, irq) < 0) {
+        perror("vfio_irq_info: get info failed");
         return -1;
     }
 
     return 0;
 }
 
-void vfio_dev_close(struct vfio_dev *dev) {
-    close(dev->devfd);
-    close(dev->groupfd);
-    close(dev->containerfd);
-}
+int vfio_irq_eventfd(struct vfio_dev *dev, uint32_t index,
+        uint32_t count, int *fds)
+{
+    uint32_t i;
+    size_t sz;
+    int *pfd;
+    void *alloc;
+    struct vfio_irq_set *info;
 
-void* vfio_map_queue_buffer(int devfd, off_t offset) {
-
-    fprintf(stderr, "devfd is %d, offset is %ld, queue size is %d !!!\n", devfd, offset, QUEUE_SIZE);
-
-    void* queue_buf = mmap(NULL, QUEUE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, devfd, offset);
-    if (queue_buf == MAP_FAILED) {
-        perror("Error mapping queue buffer");
-        return NULL;
-    }
-    return queue_buf;
-}
-
-void vfio_unmap_queue_buffer(void *queue_buf, size_t size) {
-    munmap(queue_buf, size);
-}
-
-ssize_t vfio_read_rx_queue(void *rx_queue_buf, void *data, size_t size) {
-    // ... (implementation to read data from RX queue, device-specific)
-    if (size > QUEUE_SIZE) {
-        fprintf(stderr, "Error: Size exceeds queue buffer size\n");
+    sz = sizeof(struct vfio_irq_set) + count * sizeof(int);
+    if ((alloc = calloc(1, sz)) == NULL) {
+        perror("calloc failed");
         return -1;
     }
 
-    // Copy data from the RX queue buffer into the 'data' buffer
-    memcpy(data, (uint8_t*)rx_queue_buf, size);
+    pfd = (int *) ((uint8_t *) alloc + sizeof(struct vfio_irq_set));
+    for (i = 0; i < count; i++) {
+        if ((fds[i] = eventfd(0, EFD_NONBLOCK)) < 0) {
+            perror("vfio_irq_eventfd: eventfd failed");
+            free(alloc);
+            return -1;
+        }
+        pfd[i] = fds[i];
+    }
 
-    return size;
-}
+    info = alloc;
+    info->argsz = sz;
+    info->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;;
+    info->index = index;
+    info->start = 0;
+    info->count = count;
 
-ssize_t vfio_write_tx_queue(void *tx_queue_buf, const void *data, size_t size) {
-    // ... (implementation to write data to TX queue, device-specific)
-    if (size > QUEUE_SIZE) {
-        fprintf(stderr, "Error: Size exceeds queue buffer size\n");
+    if (ioctl(dev->devfd, VFIO_DEVICE_SET_IRQS, info) < 0) {
+        perror("vfio_irq_eventfd: set failed");
         return -1;
     }
 
-    // Copy data from the 'data' buffer into the TX queue buffer
-    memcpy(tx_queue_buf, data, size);
+    free(alloc);
 
-    uint8_t *byte_ptr = (uint8_t*)tx_queue_buf; // Cast the void* pointer to uint8_t*
-    fprintf(stderr, "print tx queue right after write\n");
-    for (size_t i = 0; i < size; i++) {
-        fprintf(stderr, "i is %ld\n", i);
-        uint8_t current_byte = byte_ptr[i];
-        
-        if (current_byte == '\0') {
-            // Reached the end of the string, break the loop
-            break;
-        } 
-        fprintf(stderr, "i %ld %c ", i, current_byte);
-    }
-    fprintf(stderr, "\n");
-
-    return size;
+    return 0;
 }
 
-int main(int argc, char *argv[]) {
+int vfio_region_info(struct vfio_dev *dev, uint32_t index,
+        struct vfio_region_info *reg)
+{
+    memset(reg, 0, sizeof(*reg));
+
+    reg->argsz = sizeof(*reg);
+    reg->index = index;
+    reg->offset = 0;
+
+    if (ioctl(dev->devfd, VFIO_DEVICE_GET_REGION_INFO, reg) < 0) {
+        perror("vfio_region_info: get info failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+int vfio_region_map(struct vfio_dev *dev, uint32_t index, void **addr,
+        size_t *len, struct vfio_region_info *reg)
+{
+    void *ret;
+
+    if (vfio_region_info(dev, index, reg) != 0) {
+        return -1;
+    }
+
+    if ((ret = mmap(NULL, reg->size, PROT_READ | PROT_WRITE,
+                    MAP_SHARED | MAP_POPULATE, dev->devfd, reg->offset))
+            == MAP_FAILED)
+    {
+        perror("vfio_region_map: mmap failed");
+        return -1;
+    }
+
+    *addr = ret;
+    *len = reg->size;
+
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
     struct vfio_dev dev;
-    memset(&dev, 0, sizeof(dev));
+    void *regs;
+    size_t reg_len;
+    struct vfio_region_info reg;
 
-    // Open VFIO device
     if (vfio_dev_open(&dev, argv[1], argv[2]) != 0) {
-        fprintf(stderr, "Error opening VFIO device\n");
-        return 1;
+        fprintf(stderr, "open device failed\n");
+        return -1;
     }
 
-    fprintf(stderr, "TX_QUEUE_DESC_RING_ADDR_REG %x\n", TX_QUEUE_DESC_RING_ADDR_REG);
-    // Map device regions
-    void *tx_queue_buf = vfio_map_queue_buffer(dev.devfd, TX_QUEUE_DESC_RING_ADDR_REG);
-    if (tx_queue_buf == NULL) {
-        vfio_dev_close(&dev);
-        return 1;
-    }
-    fprintf(stderr, "tx_queue_buf %p\n", tx_queue_buf);
-
-    fprintf(stderr, "RX_QUEUE_DESC_RING_ADDR_REG %x\n", RX_QUEUE_DESC_RING_ADDR_REG);
-    void *rx_queue_buf = vfio_map_queue_buffer(dev.devfd, RX_QUEUE_DESC_RING_ADDR_REG);
-    if (rx_queue_buf == NULL) {
-        vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
-        vfio_dev_close(&dev);
-        return 1;
+    if(vfio_region_map(&dev, 0, &regs, &reg_len, &reg)) {
+        fprintf(stderr, "mapping registers failed\n");
+        return -1;
     }
 
-    fprintf(stderr, "rx_queue_buf %p\n", rx_queue_buf);
+    for (int i=0; i<2; i++) {
+        fprintf(stderr, "Read from i %d...\n", i);
 
-    // Perform read and write operations on the queues
-    char data[] = "Hello, VFIO!";
-    size_t data_size = strlen(data) + 1;
+        uint y = READ_REG64(regs, reg.offset + i);
+        fprintf(stderr, "y is %x...\n", y);
 
-    // Write data to the TX queue
-    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
-    if (write_result < 0) {
-        perror("Error writing to TX queue");
-    } else {
-        printf("Data written to TX queue: %s\n", data);
+        uint64_t u = i;
+        fprintf(stderr, "u is %lx...\n", u);
+
+        WRITE_REG64(regs, reg.offset + i, u);
+        fprintf(stderr, "write u to regs...\n");
+
+        fprintf(stderr, "Read again from i %d...\n", i);
+        uint z = READ_REG64(regs, reg.offset + i);
+        fprintf(stderr, "z is %x...\n", z);
+
+        usleep(1000);
     }
-
-    fprintf(stderr, "tx_queue_buf %p\n", tx_queue_buf);
-
-    // Read data from the RX queue
-    char rx_data[13];
-    ssize_t read_result = vfio_read_rx_queue(tx_queue_buf, rx_data, data_size);
-    if (read_result < 0) {
-        perror("Error reading from RX queue");
-    } else {
-        printf("Data read from RX queue: %s\n", rx_data);
-    }
-
-    fprintf(stderr, "rx_queue_buf %p\n", rx_queue_buf);
-
-    printf("read data from rx queue: ");
-    int i = 0;
-    while (rx_data[i] != '\0') {
-        putchar(rx_data[i]);
-        i++;
-    }
-    printf("\n");
-
-
-    // Clean up
-    vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
-    vfio_unmap_queue_buffer(rx_queue_buf, QUEUE_SIZE);
-    vfio_dev_close(&dev);
-
-    // sleep(10);
 
     return 0;
 }
