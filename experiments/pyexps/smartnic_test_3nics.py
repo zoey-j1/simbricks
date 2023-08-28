@@ -29,7 +29,7 @@ import time
 
 synchronized = False
 experiments = []
-total = 5
+total = 3
 
 start_time = time.time()
 
