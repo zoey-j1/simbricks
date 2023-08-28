@@ -7,7 +7,7 @@ start_time=$(date +%s.%N)
 # python3 run.py --verbose --force pyexps/smartnic_test.py > out/time.txt  # Experiment completed in 22.939597608 seconds.
 # python3 run.py --verbose --force pyexps/smartnic_test_2nics.py > out/time.txt  # Experiment completed in 28.361418800 seconds.
 # python3 run.py --verbose --force pyexps/smartnic_test_3nics.py > out/time.txt  # Experiment completed in 41.334653330 seconds.
-python3 run.py --verbose --force pyexps/smartnic_test_4nics.py > out/time.txt  # Experiment completed in 41.334653330 seconds.
+python3 run.py --verbose --force pyexps/smartnic_test_4nics.py > out/time.txt  # Experiment completed in 48.031642780 seconds.
 # python3 run.py --verbose --force pyexps/smartnic_test_5nics.py > out/time.txt  # Experiment completed in 74.283931704 seconds.
 
 # Record end time
