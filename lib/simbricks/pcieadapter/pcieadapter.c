@@ -94,6 +94,11 @@ bool simbricks_adapter_getwrite(struct SimbricksPcieIf *pcie, void *ev, uint64_t
       return false;
   }
 
+  if (msg->write.bar != 0) {
+    fprintf(stderr, "error: write to bar != 0\n");
+    return false;
+  }
+
   *id = msg->write.req_id;
   *addr = msg->write.offset;
   *len = msg->write.len;
@@ -172,12 +177,13 @@ void simbricks_adapter_complw(struct SimbricksPcieIf *pcie, uint64_t id, uint64_
 
 }
 
-void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts)
+void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t addr, uint64_t ts)
 {
   fprintf(stderr, "simbricks_adapter_forward_read start\n");
   volatile union SimbricksProtoPcieD2H *msg = alloc_out(pcie, ts);
-  memcpy((void *) msg->write.data, &val, len);
-  msg->writecomp.req_id = id;
+  msg->read.req_id = id;
+  msg->read.len = len;
+  msg->read.offset = addr;
 
   fprintf(stderr, "forward offset %ld, len %d\n", msg->read.offset, msg->read.len);
   SimbricksPcieIfD2HOutSend(pcie, msg,

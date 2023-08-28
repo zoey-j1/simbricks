@@ -9,6 +9,14 @@
 #include <simbricks/pcie/if.h>
 #include <simbricks/smartnicif/smartnicif.h>
 
+struct MemoryMapped{
+  uint8_t mem_input[8];
+  uint8_t mem_output[4];
+  uint8_t mem_verilator[1];
+} ;
+
+struct MemoryMapped *memmap;
+
 void simbricks_adapter_init(struct SimbricksSmartNicIf *nicif, const char *socket_path0, const char *socket_path1, const char *shm_path, bool enable_sync);
 void *simbricks_adapter_getevent(struct SimbricksPcieIf *pcie, uint64_t ts);
 bool simbricks_adapter_getread(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len);
@@ -17,7 +25,7 @@ void simbricks_adapter_eventdone(struct SimbricksPcieIf *pcie, void *ev);
 uint64_t simbricks_adapter_nextts(struct SimbricksPcieIf *pcie);
 void simbricks_adapter_complr(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts);
 void simbricks_adapter_complw(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t ts);
-void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts);
+void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t addr, uint64_t ts);
 bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len);
 void simbricks_adapter_forward_write(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t ts);
 bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr, uint8_t *len, uint64_t *val);
