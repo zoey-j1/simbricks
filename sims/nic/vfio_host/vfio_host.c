@@ -23,32 +23,16 @@
  */
 
 #define __USE_LARGEFILE64
-// #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-// #include <string.h>
-// #include <sys/ioctl.h>
-// #include <sys/mman.h>
-// #include <sys/stat.h>
-// #include <unistd.h>
-// #include <sys/mman.h>
-// #include <sys/eventfd.h>
-// #include <linux/pci.h>
-// #include <unistd.h>
-// #include <string.h>
-// #include <fcntl.h>
-// #include <pthread.h>
-// #include <dirent.h>
-// #include <errno.h>
-// #include <unistd.h>
 
 #include <simbricks/vfio/vfio.h>
 
 int main(int argc, char *argv[])
 {
     struct vfio_dev dev;
-    void *regs;
+    void *mapped_addr;
     size_t reg_len;
     struct vfio_region_info reg;
 
@@ -57,28 +41,24 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if(vfio_region_map(&dev, 0, &regs, &reg_len, &reg)) {
+    if(vfio_region_map(&dev, 0, &mapped_addr, &reg_len, &reg)) {
         fprintf(stderr, "mapping registers failed\n");
         return -1;
     }
+ 
+    if(vfio_busmaster_enable(&dev)) {
+        fprintf(stderr, "busmaster enable failed\n");
+        return -1;
+    }
+
+    int* int_mapped_addr = (int*)(mapped_addr);
 
     for (int i=0; i<2; i++) {
         fprintf(stderr, "Read from i %d...\n", i);
 
-        uint y = READ_REG64(regs, reg.offset + i);
+        // host send read request
+        uint y = READ_REG64(mapped_addr, reg.offset + i);
         fprintf(stderr, "y is %x...\n", y);
-
-        uint64_t u = i;
-        fprintf(stderr, "u is %lx...\n", u);
-
-        WRITE_REG64(regs, reg.offset + i, u);
-        fprintf(stderr, "write u to regs...\n");
-
-        fprintf(stderr, "Read again from i %d...\n", i);
-        uint z = READ_REG64(regs, reg.offset + i);
-        fprintf(stderr, "z is %x...\n", z);
-
-        usleep(1000);
     }
 
     return 0;

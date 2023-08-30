@@ -61,6 +61,10 @@ int vfio_read(struct vfio_dev* dev, struct vfio_region_info *reg,
 int vfio_write(struct vfio_dev* dev, struct vfio_region_info *reg,
     void* buf, size_t len, off_t off);
 
+int vfio_get_region_info(struct vfio_dev *dev, int i, struct vfio_region_info *reg);
+
+int vfio_busmaster_enable(struct vfio_dev *dev);
+
 #define READ_REG32(b, o) *((volatile uint32_t *) (((uint8_t *) b) + o))
 #define WRITE_REG32(b, o, d) (*((volatile uint32_t *)((uint8_t *) b + o)) = ((uint32_t) d))
 
