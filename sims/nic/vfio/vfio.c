@@ -42,6 +42,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdbool.h>
 
 #include "vfio.h"
 
@@ -198,34 +200,39 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Perform read and write operations on the queues
-    char data[] = "Hello, VFIO!";
-    size_t data_size = strlen(data) + 1;
-
-    // Write data to the TX queue
-    ssize_t write_result = vfio_write_tx_queue(tx_queue_buf, data, data_size);
-    if (write_result < 0) {
-        perror("Error writing to TX queue");
-    } else {
-        printf("Data written to TX queue: %s\n", data);
-    }
+    const clock_t start = clock();
+    int duration = 0;
 
     // Read data from the RX queue
-    char rx_data[QUEUE_SIZE];
-    ssize_t read_result = vfio_read_rx_queue(rx_queue_buf, rx_data, data_size);
-    if (read_result < 0) {
-        perror("Error reading from RX queue");
-    } else {
-        printf("Data read from RX queue: %s\n", rx_data);
+    char rx_data[1];
+    int nums = 0;
+    int noRequest = 1000;
+
+    while (true) {
+        auto curr = clock();
+        // breakout after 1 second, to check how many request is sent
+        if (nums >= noRequest || curr > start + 100000000) {
+            break;
+        }
+
+        ssize_t read_result = vfio_read_rx_queue(rx_queue_buf, rx_data, 1);
+        if (read_result < 0) {
+            perror("Error reading from RX queue");
+        } else {
+            printf("Data read from RX queue: %s\n", rx_data);
+        }
+
+        auto stop = clock();
+        duration = duration + (stop - curr);
+        nums++;
+
+        usleep(100000000 / noRequest);
+        auto postsleep = clock();
+        fprintf(stderr, "curr: %d, postsleep %d\n", curr, postsleep);
     }
 
-    printf("read data from rx queue: ");
-    int i = 0;
-    while (rx_data[i] != '\0') {
-        putchar(rx_data[i]);
-        i++;
-    }
-    printf("\n");
+    duration = duration / nums;
+    fprintf(stderr, "number of request sent: %d, time per request %d microseconds\n", nums, duration);
 
     // Clean up
     vfio_unmap_queue_buffer(tx_queue_buf, QUEUE_SIZE);
