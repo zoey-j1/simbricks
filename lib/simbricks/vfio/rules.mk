@@ -22,12 +22,11 @@
 
 include mk/subdir_pre.mk
 
-$(eval $(call subdir,corundum))
-$(eval $(call subdir,corundum_bm))
-$(eval $(call subdir,e1000_gem5))
-$(eval $(call subdir,i40e_bm))
-$(eval $(call subdir,smartnic_adapter))
-$(eval $(call subdir,vfio_host))
-$(eval $(call subdir,vfio_soc))
+lib_vfio := $(d)libvfio.a
 
+OBJS := $(addprefix $(d),vfio.o)
+
+$(lib_vfio): $(OBJS)
+
+CLEAN := $(lib_vfio) $(OBJS)
 include mk/subdir_post.mk

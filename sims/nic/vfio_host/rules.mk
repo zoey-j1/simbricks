@@ -22,14 +22,14 @@
 
 include mk/subdir_pre.mk
 
-bin_vfio := $(d)vfio
+bin_vfio_host := $(d)vfio_host
 
-objs_vfio := $(d)vfio.o
+objs_vfio_host := $(d)vfio_host.o
 
 $(OBJS): CPPFLAGS := $(CPPFLAGS) -I$(d)include/
 
-$(bin_vfio): $(objs_vfio) -lpcap
+$(bin_vfio_host): $(objs_vfio_host) $(lib_vfio) -lpcap
 
-CLEAN := $(bin_vfio) $(OBJS)
-ALL := $(bin_vfio)
+CLEAN := $(bin_vfio_host) $(OBJS)
+ALL := $(bin_vfio_host)
 include mk/subdir_post.mk

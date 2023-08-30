@@ -64,8 +64,8 @@ int vfio_write(struct vfio_dev* dev, struct vfio_region_info *reg,
 #define READ_REG32(b, o) *((volatile uint32_t *) (((uint8_t *) b) + o))
 #define WRITE_REG32(b, o, d) (*((volatile uint32_t *)((uint8_t *) b + o)) = ((uint32_t) d))
 
-#define READ_REG64(b, o) (volatile uint64_t *) (((uint64_t *) b) + o)
-// #define READ_REG64(b, o) (*(volatile uint64_t *) (((uint64_t *) b) + o))
+// #define READ_REG64(b, o) (volatile uint64_t *) (((uint64_t *) b) + o)
+#define READ_REG64(b, o) (*(volatile uint64_t *) (((uint64_t *) b) + o))
 #define WRITE_REG64(b, o, d) (*((volatile uint64_t *)((uint8_t *) b + o)) = ((uint64_t) d))
 
 #endif /* ndef VFIO_H_ */

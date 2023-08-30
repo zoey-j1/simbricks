@@ -834,7 +834,7 @@ class AdapterHostNode(NodeConfig):
 class AdapterHostApp(AppConfig):
     def config_files(self):
         # copy cps impl binary into host image during prep
-        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
+        m = {'controller_impl': open('../sims/nic/vfio_host/vfio_host', 'rb')}
         return {**m, **super().config_files()}
 
     def run_cmds(self, node):
@@ -861,7 +861,7 @@ class AdapterSocNode(NodeConfig):
 class AdapterSocApp(AppConfig):
     def config_files(self):
         # copy cps impl binary into host image during prep
-        m = {'controller_impl': open('../sims/nic/vfio/vfio', 'rb')}
+        m = {'controller_impl': open('../sims/nic/vfio_soc/vfio_soc', 'rb')}
         return {**m, **super().config_files()}
 
     def run_cmds(self, node):
