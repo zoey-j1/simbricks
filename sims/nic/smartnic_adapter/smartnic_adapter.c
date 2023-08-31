@@ -48,10 +48,19 @@ typedef struct {
 
 typedef struct {
     uint64_t id;
+    uint64_t value;
+} ReadCompEvent;
+
+typedef struct {
+    uint64_t id;
     uint64_t addr;
     uint8_t len;
     uint64_t value;
 } WriteEvent;
+
+typedef struct {
+    uint64_t id;
+} WriteCompEvent;
 
 static struct SimbricksSmartNicIf nicif;
 
@@ -67,51 +76,61 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    ReadEvent *read_ev = malloc(sizeof(ReadEvent));
-    WriteEvent *write_ev = malloc(sizeof(WriteEvent));
+    ReadEvent *read_ev0 = malloc(sizeof(ReadEvent));
+    WriteEvent *write_ev0 = malloc(sizeof(WriteEvent));
+
+    ReadEvent *read_ev1 = malloc(sizeof(ReadEvent));
+    ReadCompEvent *read_compl_ev1 = malloc(sizeof(ReadCompEvent));
+    WriteEvent *write_ev1 = malloc(sizeof(WriteEvent));
+    WriteCompEvent *write_compl_ev1 = malloc(sizeof(WriteCompEvent));
 
     fprintf(stderr, "Initializing SimBricks connection...\n");
     simbricks_adapter_init(&nicif, argv[1], argv[2], argv[3], 0);
 
     fprintf(stderr, "Entering simulation loop...\n");
-    uint64_t cur_time = 0;
+
+    uint64_t cur_time0 = 0;
+    uint64_t cur_time1 = 0;
+
     while (1) {
-        void *ev = simbricks_adapter_getevent(&nicif.pcie0, cur_time);
-        simbricks_adapter_eventdone(&nicif.pcie0, ev);
+        // PCIe0
+        void *ev = simbricks_adapter_getevent(&nicif.pcie0, cur_time0);
 
         if (ev != NULL) {
-            if (simbricks_adapter_getread(&nicif.pcie0, ev, &read_ev->id, &read_ev->addr, &read_ev->len)) {
+            if (simbricks_adapter_getread(&nicif.pcie0, ev, &read_ev0->id, &read_ev0->addr, &read_ev0->len)) {
                 fprintf(stderr, "adapter getread, forward from pcie0 to pcie1\n");
-                simbricks_adapter_forward_read(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
+                simbricks_adapter_forward_read(&nicif.pcie1, read_ev0->id, &read_ev0->addr, read_ev0->len, cur_time1);
             } 
-            else if (simbricks_adapter_getwrite(&nicif.pcie0, ev, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
-                simbricks_adapter_forward_write(&nicif.pcie1, write_ev->id, cur_time);
+            else if (simbricks_adapter_getwrite(&nicif.pcie0, ev, &write_ev0->id, &write_ev0->addr, &write_ev0->len, &write_ev0->value)) {
+                simbricks_adapter_forward_write(&nicif.pcie1, write_ev0->id, cur_time1);
             }
         }
 
         uint64_t next_time = simbricks_adapter_nextts(&nicif.pcie0);
-        cur_time = next_time;
+        cur_time0 = next_time;
+        simbricks_adapter_eventdone(&nicif.pcie0, ev);
 
-        void *ev1 = simbricks_adapter_getevent(&nicif.pcie1, cur_time);
-        simbricks_adapter_eventdone(&nicif.pcie1, ev1);
+        // PCIe1
+        void *ev1 = simbricks_adapter_getevent(&nicif.pcie1, cur_time1);
 
         if (ev1 != NULL) {
-            if (simbricks_adapter_getreadcomp(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
-                simbricks_adapter_complr(&nicif.pcie0, read_ev->id, 42, read_ev->len, cur_time);
+            if (simbricks_adapter_getreadcomp(&nicif.pcie1, ev1, &read_compl_ev1->id, &read_compl_ev1->value)) {
+                simbricks_adapter_complr(&nicif.pcie0, read_compl_ev1->id, read_compl_ev1->value, sizeof(read_compl_ev1->value), cur_time0);
             }
-            else if (simbricks_adapter_getwritecomp(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
-                simbricks_adapter_complw(&nicif.pcie0, write_ev->id, cur_time);
+            else if (simbricks_adapter_getwritecomp(&nicif.pcie1, ev1, &write_compl_ev1->id)) {
+                simbricks_adapter_complw(&nicif.pcie0, write_ev0->id, cur_time0);
             }
-            else if (simbricks_adapter_getread(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
-                simbricks_adapter_complr(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
+            else if (simbricks_adapter_getread(&nicif.pcie1, ev1, &read_ev1->id, &read_ev1->addr, &read_ev1->len)) {
+                simbricks_adapter_complr(&nicif.pcie1, read_ev1->id, 42, read_ev1->len, cur_time1);
             } 
-            else if (simbricks_adapter_getwrite(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
-                simbricks_adapter_complw(&nicif.pcie1, write_ev->id, cur_time);
+            else if (simbricks_adapter_getwrite(&nicif.pcie1, ev1, &write_ev1->id, &write_ev1->addr, &write_ev1->len, &write_ev1->value)) {
+                simbricks_adapter_complw(&nicif.pcie1, write_ev1->id, cur_time1);
             }
         }
 
         uint64_t next_time1 = simbricks_adapter_nextts(&nicif.pcie1);
-        cur_time = next_time1;
+        cur_time1 = next_time1;
+        simbricks_adapter_eventdone(&nicif.pcie1, ev1);
     }
 
     return 0;

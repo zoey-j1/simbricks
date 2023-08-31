@@ -172,29 +172,25 @@ void simbricks_adapter_complw(struct SimbricksPcieIf *pcie, uint64_t id, uint64_
 
 }
 
-void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t val, uint8_t len, uint64_t ts)
+void simbricks_adapter_forward_read(struct SimbricksPcieIf *pcie, uint64_t id, uint64_t *addr, uint8_t len, uint64_t ts)
 {
   fprintf(stderr, "simbricks_adapter_forward_read start\n");
   volatile union SimbricksProtoPcieD2H *msg = alloc_out(pcie, ts);
-  memcpy((void *) msg->write.data, &val, len);
-  msg->writecomp.req_id = id;
-  // msg->read.offset = TX_QUEUE_DESC_RING_SIZE_REG;
-  // msg->read.len = sizeof(uint64_t);
+  msg->read.req_id = id;
+  msg->read.offset = addr;
+  msg->read.len = len;
 
   fprintf(stderr, "forward offset %ld, len %d\n", msg->read.offset, msg->read.len);
   SimbricksPcieIfD2HOutSend(pcie, msg,
     SIMBRICKS_PROTO_PCIE_D2H_MSG_READ);
 }
 
-bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr,
-                               uint8_t *len)
+bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *val)
 {
   fprintf(stderr, "simbricks_adapter_getreadcomp start\n");
   volatile union SimbricksProtoPcieH2D *msg =
     (volatile union SimbricksProtoPcieH2D *) ev;
 
-  fprintf(stderr, "!msg %d\n", !msg);
-  fprintf(stderr, "!msg || SimbricksPcieIfH2DInType(pcie, msg) %d\n", !msg || SimbricksPcieIfH2DInType(pcie, msg)!= SIMBRICKS_PROTO_PCIE_H2D_MSG_READCOMP);
   if (msg){
     fprintf(stderr, "SimbricksPcieIfH2DInType(pcie, msg) %d\n", SimbricksPcieIfH2DInType(pcie, msg));
   }
@@ -204,11 +200,10 @@ bool simbricks_adapter_getreadcomp(struct SimbricksPcieIf *pcie, void *ev, uint6
       return false;
   }
 
-  *id = msg->read.req_id;
-  *addr = msg->read.offset;
-  *len = msg->read.len;
+  *id = msg->readcomp.req_id;
+  *val = msg->readcomp.data;
 
-  fprintf(stderr, "simbricks_adapter_getreadcomp return TRUE, address is %ld\n", *addr);
+  fprintf(stderr, "simbricks_adapter_getreadcomp return TRUE, id is %ld, value is %ld\n", *id, *val);
 
   return true;
 }
@@ -221,15 +216,12 @@ void simbricks_adapter_forward_write(struct SimbricksPcieIf *pcie, uint64_t id, 
     SIMBRICKS_PROTO_PCIE_D2H_MSG_WRITE);
 }
 
-bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id, uint64_t *addr,
-                               uint8_t *len, uint64_t *val)
+bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint64_t *id)
 {
   fprintf(stderr, "simbricks_adapter_getwritecomp start\n");
   volatile union SimbricksProtoPcieH2D *msg =
     (volatile union SimbricksProtoPcieH2D *) ev;
 
-  fprintf(stderr, "!msg %d\n", !msg);
-  fprintf(stderr, "!msg || SimbricksPcieIfH2DInType(pcie, msg) %d\n", !msg || SimbricksPcieIfH2DInType(pcie, msg)!= SIMBRICKS_PROTO_PCIE_H2D_MSG_WRITECOMP);
   if (msg){
     fprintf(stderr, "SimbricksPcieIfH2DInType(pcie, msg) %d\n", SimbricksPcieIfH2DInType(pcie, msg));
   }
@@ -239,11 +231,9 @@ bool simbricks_adapter_getwritecomp(struct SimbricksPcieIf *pcie, void *ev, uint
       return false;
   }
 
-  *id = msg->read.req_id;
-  *addr = msg->read.offset;
-  *len = msg->read.len;
+  *id = msg->writecomp.req_id;
 
-  fprintf(stderr, "simbricks_adapter_getwritecomp return TRUE, address is %ld\n", *addr);
+  fprintf(stderr, "simbricks_adapter_getwritecomp return TRUE, id is %ld\n", *id);
 
   return true;
 }
