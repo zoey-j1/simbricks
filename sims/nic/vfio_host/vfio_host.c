@@ -52,8 +52,9 @@ int main(int argc, char *argv[])
     }
 
     int* int_mapped_addr = (int*)(mapped_addr);
+    int num_request = 1;
 
-    for (int i=0; i<2; i++) {
+    for (int i=0; i < num_request; i++) {
         fprintf(stderr, "Read from i %d...\n", i);
 
         // host send read request

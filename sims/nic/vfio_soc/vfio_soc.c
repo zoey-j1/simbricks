@@ -54,20 +54,7 @@ int main(int argc, char *argv[])
     int* int_mapped_addr = (int*)(mapped_addr);
 
     for (int i=0; i<2; i++) {
-        fprintf(stderr, "Read from i %d...\n", i);
-
-        uint y = READ_REG64(int_mapped_addr, reg.offset + i);
-        fprintf(stderr, "y is %x...\n", y);
-
-        uint64_t u = i;
-        fprintf(stderr, "u is %lx...\n", u);
-
-        WRITE_REG64(int_mapped_addr, reg.offset + i, u);
-        fprintf(stderr, "write u to regs...\n");
-
-        fprintf(stderr, "Read again from i %d...\n", i);
-        uint z = READ_REG64(int_mapped_addr, reg.offset + i);
-        fprintf(stderr, "z is %x...\n", z);
+        usleep(10000);
     }
 
     return 0;

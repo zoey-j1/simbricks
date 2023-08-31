@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include <simbricks/pcie/if.h>
+#include <simbricks/pcie/proto.h>
 #include <simbricks/pcieadapter/pcieadapter.h>
 #include <simbricks/smartnicif/smartnicif.h>
 
@@ -67,7 +68,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    ReadEvent *read_ev = malloc(sizeof(ReadEvent));
+    union SimbricksProtoPcieH2D *msg = (union SimbricksProtoPcieH2D *)malloc(sizeof(union SimbricksProtoPcieH2D));
+    // struct SimbricksProtoPcieH2DRead *read_ev = malloc(sizeof(struct SimbricksProtoPcieH2DRead));
     WriteEvent *write_ev = malloc(sizeof(WriteEvent));
 
     fprintf(stderr, "Initializing SimBricks connection...\n");
@@ -76,13 +78,13 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Entering simulation loop...\n");
     uint64_t cur_time = 0;
     while (1) {
+        // PCIe0
         void *ev = simbricks_adapter_getevent(&nicif.pcie0, cur_time);
-        simbricks_adapter_eventdone(&nicif.pcie0, ev);
 
         if (ev != NULL) {
-            if (simbricks_adapter_getread(&nicif.pcie0, ev, &read_ev->id, &read_ev->addr, &read_ev->len)) {
+            if (simbricks_adapter_getread(&nicif.pcie0, ev, msg->read)) {
                 fprintf(stderr, "adapter getread, forward from pcie0 to pcie1\n");
-                simbricks_adapter_forward_read(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
+                simbricks_adapter_forward_read(&nicif.pcie1, cur_time, msg->read);
             } 
             else if (simbricks_adapter_getwrite(&nicif.pcie0, ev, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
                 simbricks_adapter_forward_write(&nicif.pcie1, write_ev->id, cur_time);
@@ -91,19 +93,20 @@ int main(int argc, char *argv[]) {
 
         uint64_t next_time = simbricks_adapter_nextts(&nicif.pcie0);
         cur_time = next_time;
+        simbricks_adapter_eventdone(&nicif.pcie0, ev);
 
+        // PCIe1
         void *ev1 = simbricks_adapter_getevent(&nicif.pcie1, cur_time);
-        simbricks_adapter_eventdone(&nicif.pcie1, ev1);
 
         if (ev1 != NULL) {
-            if (simbricks_adapter_getreadcomp(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
-                simbricks_adapter_complr(&nicif.pcie0, read_ev->id, 42, read_ev->len, cur_time);
+            if (simbricks_adapter_getreadcomp(&nicif.pcie1, ev1, msg->read)) {
+                simbricks_adapter_complr(&nicif.pcie0, cur_time, msg->read);
             }
             else if (simbricks_adapter_getwritecomp(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
                 simbricks_adapter_complw(&nicif.pcie0, write_ev->id, cur_time);
             }
-            else if (simbricks_adapter_getread(&nicif.pcie1, ev1, &read_ev->id, &read_ev->addr, &read_ev->len)) {
-                simbricks_adapter_complr(&nicif.pcie1, read_ev->id, 42, read_ev->len, cur_time);
+            else if (simbricks_adapter_getread(&nicif.pcie1, ev1, msg->read)) {
+                simbricks_adapter_complr(&nicif.pcie1, cur_time, msg->read);
             } 
             else if (simbricks_adapter_getwrite(&nicif.pcie1, ev1, &write_ev->id, &write_ev->addr, &write_ev->len, &write_ev->value)) {
                 simbricks_adapter_complw(&nicif.pcie1, write_ev->id, cur_time);
@@ -112,6 +115,7 @@ int main(int argc, char *argv[]) {
 
         uint64_t next_time1 = simbricks_adapter_nextts(&nicif.pcie1);
         cur_time = next_time1;
+        simbricks_adapter_eventdone(&nicif.pcie1, ev1);
     }
 
     return 0;
