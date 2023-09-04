@@ -114,12 +114,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    memAlloc(alloc_size);
-
     if(vfio_busmaster_enable(&dev)) {
         fprintf(stderr, "busmaster enable failed\n");
         return -1;
     }
+
+    memAlloc(alloc_size);
 
     int* int_mapped_addr = (int*)(reg_bar);
 
