@@ -843,6 +843,9 @@ class AdapterHostApp(AppConfig):
 
 
 class AdapterSocNode(NodeConfig):
+    disk_image = 'vfio_soc'
+    memory = 1 * 1024
+    kcmd_append = ' memmap=512M!1G'
 
     def prepare_pre_cp(self):
         l = []
