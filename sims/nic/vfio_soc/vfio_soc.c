@@ -31,7 +31,6 @@
 #include <string.h>
 
 #include <simbricks/vfio/vfio.h>
-#include <simbricks/vfio_mem/vfio_mem.h>
 
 static void *alloc_base;
 static uint64_t alloc_phys_base = 1ULL * 1024 * 1024 * 1024;
